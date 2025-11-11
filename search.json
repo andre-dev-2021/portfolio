@@ -1,0 +1,191 @@
+[
+  {
+    "objectID": "posts/sptrans/index.html",
+    "href": "posts/sptrans/index.html",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "",
+    "text": "Com Python podemos criar projetos diversos integrando as muitas bibliotecas disponíveis. Hoje, utilizaremos as bibliotecas requests e folium para criar um mapa para monitorar linhas de ônibus."
+  },
+  {
+    "objectID": "posts/sptrans/index.html#api-olho-vivo",
+    "href": "posts/sptrans/index.html#api-olho-vivo",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "API Olho Vivo",
+    "text": "API Olho Vivo\nA SPTrans disponibiliza a API gratuita Olho Vivo para projetos. Para utilizar, você precisa gerar um token na seção de Desenvolvedores do site da SPTrans.\nNeste projeto, utilizaremos os endpoints: /Buscar, /ParadasPorLinha e /Linha."
+  },
+  {
+    "objectID": "posts/sptrans/index.html#bibliotecas-utilizadas",
+    "href": "posts/sptrans/index.html#bibliotecas-utilizadas",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "Bibliotecas Utilizadas",
+    "text": "Bibliotecas Utilizadas\n\nRequests\nFolium\n\nEste projeto foi desenvolvido em Python 3"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#configurando-variáveis-de-ambiente",
+    "href": "posts/sptrans/index.html#configurando-variáveis-de-ambiente",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "1. Configurando variáveis de ambiente",
+    "text": "1. Configurando variáveis de ambiente\nPara utilizar a API precisamos de um token, após cadastrarmos no site da SPTrans, inserimos o token em um arquivo .env\nSPTRANS_TOKEN=InsiraSeuTokenAqui\nPara utilizá-lo no arquivo .py, utilize as bibliotecas os e dotenv.\nimport os\nfrom dotenv import load_dotenv\n\nload_dotenv(\".env\")"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#fazendo-login",
+    "href": "posts/sptrans/index.html#fazendo-login",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "2. Fazendo login",
+    "text": "2. Fazendo login\nCom isso, podemos fazer a autênticação e utilizar a API do Olho Vivo.\ndef login():\n    s = requests.Session()\n    res = s.post(\n        f\"http://api.olhovivo.sptrans.com.br/v2.1/Login/Autenticar?token={os.getenv('SPTRANS_TOKEN')}\"\n    )\n\n    if res.text:\n        return s"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#encontrando-o-código-da-linha",
+    "href": "posts/sptrans/index.html#encontrando-o-código-da-linha",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "3. Encontrando o código da linha",
+    "text": "3. Encontrando o código da linha\nPara buscar as paradas e posições dos ônibus precisamos primeiro encontrar o código único da linha. Para isso utilizaremos o endpoint /Buscar\ndef buscar_cod(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1/Linha/Buscar?termosBusca={LINHA}\")\n\n    return res.json()[0]['cl']"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#recebendo-os-dados-da-api",
+    "href": "posts/sptrans/index.html#recebendo-os-dados-da-api",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "4. Recebendo os dados da API",
+    "text": "4. Recebendo os dados da API\nPara encontrar a parada e a posição dos ônibus utilizaremos /ParadasPorLinha e /Linha.\ndef buscar_paradas(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1/Parada/BuscarParadasPorLinha?codigoLinha={LINHA}\")\n    res = res.json()\n\n    return [(i['py'], i['px'], i['np']) for i in res]\n\ndef buscar_posicao(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1//Posicao/Linha?codigoLinha={LINHA}\")\n    res = res.json()\n\n    return [(i['p'], i['py'], i['px']) for i in res['vs']]\n\nposicao_veiculos = buscar_posicao(COD_LINHA)\nparadas = buscar_paradas(COD_LINHA)"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#gerando-mapas-e-inserindo-marcadores",
+    "href": "posts/sptrans/index.html#gerando-mapas-e-inserindo-marcadores",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "5. Gerando mapas e inserindo marcadores",
+    "text": "5. Gerando mapas e inserindo marcadores\nCom folium podemos gerar um mapa e salvar em um arquivo .html.\nfrom folium import Map, Marker, Icon\n\n\nm = Map(location=[latitude, longitude], zoom_start=14)\nMarker(location=[latitude, longitude], popup=titulo, icon=icone).add_to(m)\n\nm.save(\"arquivo.html\")\nPara utilizar cores diferentes para os marcadores vamos criar dois objetos da classe Icon() com a propriedade color diferente.\nICON_PARADA = Icon(color=\"blue\")\nICON_ONIBUS = Icon(color=\"red\")"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#resultado",
+    "href": "posts/sptrans/index.html#resultado",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "6. Resultado",
+    "text": "6. Resultado\nVamos agora gerar o nosso código completo:\nPara esse exemplo utilizaremos a linha 8000-10 TERM. LAPA / PÇA. RAMOS DE AZEVEDO\n\nimport os\nimport requests\nfrom dotenv import load_dotenv\nfrom folium import Map, Marker, Icon\n\nload_dotenv(\".env\")\n\ndef login():\n    s = requests.Session()\n    res = s.post(\n        f\"http://api.olhovivo.sptrans.com.br/v2.1/Login/Autenticar?token={os.getenv('SPTRANS_TOKEN')}\"\n    )\n\n    if res.text:\n        return s\n\ndef buscar_cod(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1/Linha/Buscar?termosBusca={LINHA}\")\n\n    return res.json()[0]['cl']\n\ndef buscar_paradas(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1/Parada/BuscarParadasPorLinha?codigoLinha={LINHA}\")\n    res = res.json()\n\n    return [(i['py'], i['px'], i['np']) for i in res]\n\ndef buscar_posicao(LINHA):\n    s = login()\n    res = s.get(f\"http://api.olhovivo.sptrans.com.br/v2.1//Posicao/Linha?codigoLinha={LINHA}\")\n    res = res.json()\n\n    return [(i['p'], i['py'], i['px']) for i in res['vs']]\n\nCOD_LINHA = buscar_cod(\"8000\")\nICON_PARADA = Icon(color=\"blue\")\nICON_ONIBUS = Icon(color=\"red\")\n\nposicao_veiculos = buscar_posicao(COD_LINHA)\nparadas = buscar_paradas(COD_LINHA)\n\nm = Map(location=[paradas[0][0], paradas[0][1]], zoom_start=14)\n\nfor i in posicao_veiculos:\n    car_id, lat, lon = i\n    Marker(location=[lat, lon], popup=car_id, icon=ICON_ONIBUS).add_to(m)\n\nfor i in paradas:\n    lat, lon, label = i\n    Marker(location=[lat, lon], popup=label, icon=ICON_PARADA).add_to(m)\n\nm.save(\"8000.html\")"
+  },
+  {
+    "objectID": "posts/sptrans/index.html#conclusão",
+    "href": "posts/sptrans/index.html#conclusão",
+    "title": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.",
+    "section": "Conclusão",
+    "text": "Conclusão\nEsse é um projeto simples que voçê pode adicionar ao seu portfólio ou utilizar para criar novos projetos."
+  },
+  {
+    "objectID": "posts/cotacao/index.html",
+    "href": "posts/cotacao/index.html",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "",
+    "text": "Extrair dados de APIs e elaborar gráficos são tarefas comuns em análise de dados, e esse projeto te ajudará a entender um pouco mais sobre esse processo."
+  },
+  {
+    "objectID": "posts/cotacao/index.html#api-do-banco-central",
+    "href": "posts/cotacao/index.html#api-do-banco-central",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "API do Banco Central",
+    "text": "API do Banco Central\nO Banco Central do Brasil disponibiliza uma API gratuita, sem necessidade de autenticação, que pode ser usada em diversos projetos.\nNeste exemplo, utilizaremos o endpoint /CotacaoDolarPeriodo\n📎Documentação da API"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#bibliotecas-utilizadas",
+    "href": "posts/cotacao/index.html#bibliotecas-utilizadas",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "Bibliotecas utilizadas:",
+    "text": "Bibliotecas utilizadas:\n\nPlotly\nPandas\nRequests\n\nEste projeto foi desenvolvido em Python 3"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#encontrando-o-primeiro-e-ultimo-dia-do-mês",
+    "href": "posts/cotacao/index.html#encontrando-o-primeiro-e-ultimo-dia-do-mês",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "1. Encontrando o primeiro e ultimo dia do mês",
+    "text": "1. Encontrando o primeiro e ultimo dia do mês\nComo iremos informar apenas o mês e o ano (formato: mmYYYY), e nem todos os meses possuem o mesmo número de dias, precisamos criar uma função que encontre o primeiro e o último dia do período informado.\nPara isso, utilizaremos as bibliotecas calendar e datetime, que já vêm incluídas no Python 3.\nimport calendar\nfrom datetime import datetime as dt\n\ndef encontrar_periodo(mmYYYY):\n    primeiro = dt.strptime(mmYYYY, \"%m%Y\")\n    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])\n\n    primeiro = dt.strftime(primeiro, \"%m-%d-%Y\")\n    ultimo = dt.strftime(ultimo, \"%m-%d-%Y\")\n\n    return primeiro, ultimo\n\ndataInicial, dataFinal = encontrar_periodo(\"082022\")"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#recebendo-os-dados-da-api",
+    "href": "posts/cotacao/index.html#recebendo-os-dados-da-api",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "2. Recebendo os dados da API",
+    "text": "2. Recebendo os dados da API\nCom as datas já formatadas (mm-dd-YYYY), podemos buscar os dados através de uma requisição GET.\n\nimport requests as rq\n\ndef cotacao_mes(dataInicial, dataFinal):\n    res = rq.get(f\"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json\")\n\n    try:\n        return res.json()['value']\n    except:\n        return f\"Erro: {res.status_code} - {res.text[:1000]}\"\n\ndados = cotacao_mes(dataInicial, dataFinal)"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#montando-um-dataframe",
+    "href": "posts/cotacao/index.html#montando-um-dataframe",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "3. Montando um DataFrame",
+    "text": "3. Montando um DataFrame\nAntes de gerar o gráfico, precisamos organizar os dados em um DataFrame para facilitar a manipulação.\n\nimport pandas as pd\n\npreco_compra = [i['cotacaoCompra'] for i in dados]\npreco_venda = [i['cotacaoVenda'] for i in dados]\ndia = [int(i['dataHoraCotacao'][8:10]) for i in dados]\n\ndf_compra = pd.DataFrame({\n    \"preco\": preco_compra,\n    \"tipo\": \"Compra\",\n    \"dia\": dia\n})\n\ndf_venda = pd.DataFrame({\n    \"preco\": preco_venda,\n    \"tipo\": \"Venda\",\n    \"dia\": dia\n})\n\ndf = pd.concat([df_compra, df_venda], ignore_index=True)"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#criando-nosso-gráfico",
+    "href": "posts/cotacao/index.html#criando-nosso-gráfico",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "4. Criando nosso gráfico",
+    "text": "4. Criando nosso gráfico\nAgora podemos visualizar as cotações com Plotly Express.\nVeja como é simples criar um gráfico de linha interativo:\nimport plotly.express as px\n\nfig = px.line(df, x=\"dia\", y=\"preco\", color='tipo')\nfig.show()"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#observando-o-resultado",
+    "href": "posts/cotacao/index.html#observando-o-resultado",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "5. Observando o resultado",
+    "text": "5. Observando o resultado\nCom tudo pronto, basta rodar o arquivo Python:\npython script.py\nO resultado será um gráfico interativo com as cotações do mês especificado.\n\nimport calendar\nimport requests as rq\nimport pandas as pd\nimport plotly.express as px\nfrom datetime import datetime as dt\n\ndef encontrar_periodo(mmYYYY):\n    primeiro = dt.strptime(mmYYYY, \"%m%Y\")\n    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])\n\n    primeiro = dt.strftime(primeiro, \"%m-%d-%Y\")\n    ultimo = dt.strftime(ultimo, \"%m-%d-%Y\")\n\n    return primeiro, ultimo\n\ndef cotacao_mes(dataInicial, dataFinal):\n    res = rq.get(f\"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json\")\n\n    try:\n        return res.json()['value']\n    except:\n        return f\"Erro: {res.status_code} - {res.text[:1000]}\"\n\n# Extração dos dados\ndataInicial, dataFinal = encontrar_periodo(\"082022\")\ndados = cotacao_mes(dataInicial, dataFinal)\n\n# Formatando para DataFrame\npreco_compra = [i['cotacaoCompra'] for i in dados]\npreco_venda = [i['cotacaoVenda'] for i in dados]\ndia = [int(i['dataHoraCotacao'][8:10]) for i in dados]\n\ndf_compra = pd.DataFrame({\n    \"preco\": preco_compra,\n    \"tipo\": \"Compra\",\n    \"dia\": dia\n})\n\ndf_venda = pd.DataFrame({\n    \"preco\": preco_venda,\n    \"tipo\": \"Venda\",\n    \"dia\": dia\n})\n\ndf = pd.concat([df_compra, df_venda], ignore_index=True)\n\n# Exibição em gráfico de linha\nfig = px.line(df, x=\"dia\", y=\"preco\", color='tipo')\nfig.show()\n\n                            \n                                            \nGráfico com cotações do mês de Agosto/2022"
+  },
+  {
+    "objectID": "posts/cotacao/index.html#conclusão",
+    "href": "posts/cotacao/index.html#conclusão",
+    "title": "Análise de Cotações do Dólar com Python e API do Banco Central",
+    "section": "Conclusão",
+    "text": "Conclusão\nCom poucas linhas de código, você aprendeu a:\n\nextrair dados de uma API,\ntratar e organizar as informações com pandas\ne criar visualizações com plotly\n\nEsse fluxo é uma excelente base para projetos de análise de dados automatizada com Python."
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "Sobre mim",
+    "section": "",
+    "text": "Apaixonado por música e programação, estou estudando Sistemas de Informação na UNASP. Atualmente estou focado em Desenvolvimento Web Backend e Frontend.\nEm projetos acadêmicos e pessoais obtive contato com linguagens como Javascript e Python, bibliotecas e frameworks como Express.js, React.js e Flask, ferramentas de versionamento como Git e GitHub, além de bancos de dados SQlite e Firebase.\nProcuro oportunidades onde posso aplicar e desenvolver novas habilidades.\n👉 Conheça alguns dos meus projetos"
+  },
+  {
+    "objectID": "about.html#olá-sou-andré-pereira",
+    "href": "about.html#olá-sou-andré-pereira",
+    "title": "Sobre mim",
+    "section": "",
+    "text": "Apaixonado por música e programação, estou estudando Sistemas de Informação na UNASP. Atualmente estou focado em Desenvolvimento Web Backend e Frontend.\nEm projetos acadêmicos e pessoais obtive contato com linguagens como Javascript e Python, bibliotecas e frameworks como Express.js, React.js e Flask, ferramentas de versionamento como Git e GitHub, além de bancos de dados SQlite e Firebase.\nProcuro oportunidades onde posso aplicar e desenvolver novas habilidades.\n👉 Conheça alguns dos meus projetos"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Bem-vindo(a) ao meu portfólio!",
+    "section": "",
+    "text": "Mapa Interativo: Monitorando Posições e Paradas de Ônibus.\n\n\n\npython\n\nAPI\n\nmapas interativos\n\nônibus\n\nfolium\n\ngeolocalização\n\n\n\nCriando mapas interativos com a biblioteca Folium\n\n\n\n\n\n11 de novembro de 2025\n\n\nAndré Pereira\n\n\n\n\n\n\n\n\n\n\n\n\nAnálise de Cotações do Dólar com Python e API do Banco Central\n\n\n\npython\n\nanálise de dados\n\nAPI\n\nplotly\n\npandas\n\nrequests\n\n\n\nAprenda a extrair dados de APIs e criar gráficos interativos com Plotly.\n\n\n\n\n\n10 de novembro de 2025\n\n\nAndré Pereira\n\n\n\n\n\n\n\n\n\n\n\n\nRegressão Linear: visualizando a relação entre valores\n\n\n\nmachine learning\n\nanálise preditiva\n\nIA\n\nplotly\n\nnumpy\n\nregressão linear\n\n\n\nConheça a base para entender como a IA faz previsões.\n\n\n\n\n\n10 de novembro de 2025\n\n\nAndré Pereira\n\n\n\n\n\nSem itens correspondentes"
+  },
+  {
+    "objectID": "posts/regressao/index.html",
+    "href": "posts/regressao/index.html",
+    "title": "Regressão Linear: visualizando a relação entre valores",
+    "section": "",
+    "text": "A regressão linear é uma técnica estatística usada para modelar a relação entre uma variável dependente (ou resposta) e uma ou mais variáveis independentes (ou preditoras).\nEla permite prever valores desconhecidos da variável dependente com base nos valores conhecidos das variáveis independentes, assumindo que essa relação pode ser representada por uma equação linear.\nEssa técnica é amplamente utilizada em machine learning e em análise de dados para fazer previsões e identificar tendências lineares entre variáveis.\nFonte: AWS - O que é regressão linear?"
+  },
+  {
+    "objectID": "posts/regressao/index.html#o-que-é-uma-regressão-linear",
+    "href": "posts/regressao/index.html#o-que-é-uma-regressão-linear",
+    "title": "Regressão Linear: visualizando a relação entre valores",
+    "section": "",
+    "text": "A regressão linear é uma técnica estatística usada para modelar a relação entre uma variável dependente (ou resposta) e uma ou mais variáveis independentes (ou preditoras).\nEla permite prever valores desconhecidos da variável dependente com base nos valores conhecidos das variáveis independentes, assumindo que essa relação pode ser representada por uma equação linear.\nEssa técnica é amplamente utilizada em machine learning e em análise de dados para fazer previsões e identificar tendências lineares entre variáveis.\nFonte: AWS - O que é regressão linear?"
+  },
+  {
+    "objectID": "posts/regressao/index.html#como-calcular-a-regressão-linear",
+    "href": "posts/regressao/index.html#como-calcular-a-regressão-linear",
+    "title": "Regressão Linear: visualizando a relação entre valores",
+    "section": "Como calcular a regressão linear?",
+    "text": "Como calcular a regressão linear?\nA fórmula para a regressão linear simples é \\(Y = b_0 + b_1X\\) onde:\n\n\\(X\\): variável independente (valor usado para prever os resultados);\n\\(Y\\): variável dependente (valor que queremos prever);\n\\(b_0\\): intercepto, o valor de \\(Y\\) quando \\(X = 0\\).\n\\(b_1\\): coeficiente angular (ou inclinação da reta), que indica a intensidade e direção da relação linear entre \\(X\\) e \\(Y\\).\n\nA forma matricial da regressão linear é dada por: \\(b = (X^{T}X)^{-1}X^Ty\\)\nonde \\(b\\) contém os coeficientes \\([b_0, b_1]\\)"
+  },
+  {
+    "objectID": "posts/regressao/index.html#exemplo-relação-entre-anos-de-estudo-e-salário",
+    "href": "posts/regressao/index.html#exemplo-relação-entre-anos-de-estudo-e-salário",
+    "title": "Regressão Linear: visualizando a relação entre valores",
+    "section": "Exemplo: relação entre anos de estudo e salário",
+    "text": "Exemplo: relação entre anos de estudo e salário\nComo exemplo vamos utilizar duas arrays:\nX para representar os anos de estudo e y para salários.\nimport numpy as np\n\nX = np.array([5, 7, 9, 10, 12, 13, 14, 16, 18, 20])\ny = np.array([1500, 1800, 2200, 2600, 3100, 3500, 4000, 4800, 5500, 6200])\n\n1. Ajustando os dados\nPara calcular os coeficientes, precisamos adicionar uma coluna de 1s a X, que representa o intercepto da regressão.\n\nX = np.array([[1, i] for i in X])\n\n\n2. Calculando os coeficientes\nAplicamos a fórmula matricial da regressão linear.\nres = np.dot(np.transpose(X), X)\nres = np.dot(np.linalg.inv(res), np.transpose(X))\nres = np.dot(res, y)\n\nb0, b1 = res\n\n\n3. Calculando os valores previstos\nCom os coeficientes em mãos, podemos estimar os valores de Y (salário previsto):\nY = [b0 + b1 * i for i in X[:, 1]]\nVamos visualizar o resultado:\n\nimport plotly.graph_objects as go\nimport numpy as np\n\n# Ajustando os dados\nX = np.array([5, 7, 9, 10, 12, 13, 14, 16, 18, 20])\ny = np.array([1500, 1800, 2200, 2600, 3100, 3500, 4000, 4800, 5500, 6200])\n\n# Calculando os coeficientes\ndef coef(X, y):\n    X = np.array([[1, i] for i in X])\n    res = np.dot(np.transpose(X), X)\n    res = np.dot(np.linalg.inv(res), np.transpose(X))\n    res = np.dot(res, y)\n\n    return res\n\nb0, b1 = coef(X, y)\n\n# Calculando os valores previstos\nY = [b0 + b1 * i for i in X]\n\n#  Visualização em gráfico\nfig = go.Figure()\nfig.add_trace(go.Scatter(x=X, y=y, mode='markers', name='dados'))\nfig.add_trace(go.Scatter(x=X, y=Y, mode='lines', name='regressão linear'))\n\nfig.update_layout(\n    title='Relação entre sálario e anos de estudo',\n    xaxis_title='Anos de estudo',\n    yaxis_title='Salário'\n)\nfig.show()"
+  },
+  {
+    "objectID": "posts/regressao/index.html#conclusão",
+    "href": "posts/regressao/index.html#conclusão",
+    "title": "Regressão Linear: visualizando a relação entre valores",
+    "section": "Conclusão",
+    "text": "Conclusão\nEmbora simples, o conceito de regressão linear serve como base para diversos algoritmos de machine learning, compreender a regressão linear é o primeiro passo para entender como as máquinas aprendem padrões nos dados e tomam decisões baseadas neles."
+  }
+]
