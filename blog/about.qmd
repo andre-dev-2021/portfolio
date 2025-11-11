@@ -1,0 +1,30 @@
+---
+title: "Sobre mim"
+image: profile.jpeg
+about:
+  template: jolla
+  links:
+    - icon: email
+      text: Contato
+      href: mailto:andrepereirasa100@gmail.com
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/andrepereirasa/
+    - icon: github
+      text: Github
+      href: https://github.com/andre-dev-2021
+
+---
+
+## 👋 Olá, sou André Pereira
+
+Apaixonado por música e programação, estou estudando **Sistemas de Informação** na UNASP.
+Atualmente estou focado em **Desenvolvimento Web Backend** e **Frontend**.
+
+Em projetos acadêmicos e pessoais obtive contato com linguagens como **Javascript** e **Python**, bibliotecas e frameworks como **Express.js**, **React.js** e **Flask**, ferramentas de versionamento como **Git** e **GitHub**, além de bancos de dados **SQlite** e **Firebase**.
+
+
+Procuro oportunidades onde posso aplicar e desenvolver novas habilidades.
+
+👉 [Conheça alguns dos meus projetos](/posts)
+

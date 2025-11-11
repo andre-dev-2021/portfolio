@@ -1,0 +1,28 @@
+project:
+  type: website
+
+website:
+  description: "Portfólio de André Pereira"
+  site-url: https://andre-dev-2021.github.io/portfolio
+  title: "Portfólio de André Pereira"
+  navbar:
+    right:
+      - about.qmd
+      - icon: github
+        href: https://github.com/andre-dev-2021
+      - icon: linkedin
+        href: https://www.linkedin.com/in/andrepereirasa/
+format:
+  html:
+    theme:
+      - zephyr
+      - brand
+    css: styles.css
+metadata:
+  author: "André Pereira"
+  lang: "pt-BR"
+  date-format: "long"
+  categories-title: "Temas"
+
+
+

@@ -1,0 +1,188 @@
+---
+title: "Análise de Cotações do Dólar com Python e API do Banco Central"
+description: "Aprenda a extrair dados de APIs e criar gráficos interativos com Plotly."
+author: "André Pereira"
+date: "11/10/2025"
+categories:
+    - python
+    - análise de dados
+    - API
+    - plotly
+    - pandas
+    - requests
+image: dolar.jpg
+---
+
+Extrair dados de APIs e elaborar gráficos são tarefas comuns em análise de dados, e esse projeto te ajudará a entender um pouco mais sobre esse processo.
+
+## API do Banco Central
+
+O Banco Central do Brasil disponibiliza uma API gratuita, sem necessidade de autenticação, que pode ser usada em diversos projetos.
+
+Neste exemplo, utilizaremos o endpoint */CotacaoDolarPeriodo*
+
+[📎Documentação da API](https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/swagger-ui3#/)
+
+## Bibliotecas utilizadas:
+
+* Plotly
+* Pandas
+* Requests
+
+Este projeto foi desenvolvido em **Python 3**
+
+## 1. Encontrando o primeiro e ultimo dia do mês
+
+Como iremos informar apenas o mês e o ano (formato: mmYYYY), e nem todos os meses possuem o mesmo número de dias, precisamos criar uma função que encontre o primeiro e o último dia do período informado.
+
+Para isso, utilizaremos as bibliotecas **calendar** e **datetime**, que já vêm incluídas no Python 3.
+
+```python
+import calendar
+from datetime import datetime as dt
+
+def encontrar_periodo(mmYYYY):
+    primeiro = dt.strptime(mmYYYY, "%m%Y")
+    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])
+
+    primeiro = dt.strftime(primeiro, "%m-%d-%Y")
+    ultimo = dt.strftime(ultimo, "%m-%d-%Y")
+
+    return primeiro, ultimo
+
+dataInicial, dataFinal = encontrar_periodo("082022")
+```
+
+## 2. Recebendo os dados da API
+
+Com as datas já formatadas (mm-dd-YYYY), podemos buscar os dados através de uma requisição GET.
+
+```python
+
+import requests as rq
+
+def cotacao_mes(dataInicial, dataFinal):
+    res = rq.get(f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json")
+
+    try:
+        return res.json()['value']
+    except:
+        return f"Erro: {res.status_code} - {res.text[:1000]}"
+
+dados = cotacao_mes(dataInicial, dataFinal)
+```
+
+## 3. Montando um DataFrame
+
+Antes de gerar o gráfico, precisamos organizar os dados em um DataFrame para facilitar a manipulação.
+
+```python
+
+import pandas as pd
+
+preco_compra = [i['cotacaoCompra'] for i in dados]
+preco_venda = [i['cotacaoVenda'] for i in dados]
+dia = [int(i['dataHoraCotacao'][8:10]) for i in dados]
+
+df_compra = pd.DataFrame({
+    "preco": preco_compra,
+    "tipo": "Compra",
+    "dia": dia
+})
+
+df_venda = pd.DataFrame({
+    "preco": preco_venda,
+    "tipo": "Venda",
+    "dia": dia
+})
+
+df = pd.concat([df_compra, df_venda], ignore_index=True)
+```
+
+## 4. Criando nosso gráfico
+
+Agora podemos visualizar as cotações com Plotly Express.
+
+Veja como é simples criar um gráfico de linha interativo:
+```python
+import plotly.express as px
+
+fig = px.line(df, x="dia", y="preco", color='tipo')
+fig.show()
+```
+
+## 5. Observando o resultado
+
+Com tudo pronto, basta rodar o arquivo Python:
+
+```bash
+python script.py
+```
+
+O resultado será um gráfico interativo com as cotações do mês especificado.
+
+```{python}
+
+#| label: plot_cotacoes
+#| fig-cap: "Gráfico com cotações do mês de Agosto/2022"
+
+import calendar
+import requests as rq
+import pandas as pd
+import plotly.express as px
+from datetime import datetime as dt
+
+def encontrar_periodo(mmYYYY):
+    primeiro = dt.strptime(mmYYYY, "%m%Y")
+    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])
+
+    primeiro = dt.strftime(primeiro, "%m-%d-%Y")
+    ultimo = dt.strftime(ultimo, "%m-%d-%Y")
+
+    return primeiro, ultimo
+
+def cotacao_mes(dataInicial, dataFinal):
+    res = rq.get(f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json")
+
+    try:
+        return res.json()['value']
+    except:
+        return f"Erro: {res.status_code} - {res.text[:1000]}"
+
+# Extração dos dados
+dataInicial, dataFinal = encontrar_periodo("082022")
+dados = cotacao_mes(dataInicial, dataFinal)
+
+# Formatando para DataFrame
+preco_compra = [i['cotacaoCompra'] for i in dados]
+preco_venda = [i['cotacaoVenda'] for i in dados]
+dia = [int(i['dataHoraCotacao'][8:10]) for i in dados]
+
+df_compra = pd.DataFrame({
+    "preco": preco_compra,
+    "tipo": "Compra",
+    "dia": dia
+})
+
+df_venda = pd.DataFrame({
+    "preco": preco_venda,
+    "tipo": "Venda",
+    "dia": dia
+})
+
+df = pd.concat([df_compra, df_venda], ignore_index=True)
+
+# Exibição em gráfico de linha
+fig = px.line(df, x="dia", y="preco", color='tipo')
+fig.show()
+```
+
+## Conclusão
+
+Com poucas linhas de código, você aprendeu a:
+
+* extrair dados de uma API,
+* tratar e organizar as informações com **pandas**
+* e criar visualizações com **plotly**
+
+Esse fluxo é uma excelente base para projetos de análise de dados automatizada com Python.

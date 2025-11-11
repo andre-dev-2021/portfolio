@@ -1,0 +1,9 @@
+/.quarto/
+**/*.quarto_ipynb
+*.env
+.quarto/
+_site/
+.Rhistory
+.RData
+__pycache__/
+_freeze/

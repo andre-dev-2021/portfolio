@@ -1,0 +1,190 @@
+---
+title: "Mapa Interativo: Monitorando Posições e Paradas de Ônibus."
+description: "Criando mapas interativos com a biblioteca Folium"
+author: "André Pereira"
+date: "11/11/2025"
+categories:
+    - python
+    - API
+    - mapas interativos
+    - ônibus
+    - folium
+    - geolocalização
+image: onibus.jpg
+---
+
+Com **Python** podemos criar projetos diversos integrando as muitas bibliotecas disponíveis. Hoje, utilizaremos as bibliotecas **requests** e **folium** para criar um mapa para monitorar linhas de ônibus.
+
+## API Olho Vivo
+
+A SPTrans disponibiliza a API gratuita Olho Vivo para projetos. Para utilizar, você precisa gerar um token na seção de Desenvolvedores do site da [SPTrans](https://www.sptrans.com.br/desenvolvedores/).
+
+Neste projeto, utilizaremos os endpoints: */Buscar*, */ParadasPorLinha* e */Linha*.
+
+## Bibliotecas Utilizadas
+
+* Requests
+* Folium
+
+Este projeto foi desenvolvido em **Python 3**
+
+## 1. Configurando variáveis de ambiente
+
+Para utilizar a API precisamos de um token, após cadastrarmos no site da SPTrans, inserimos o token em um arquivo .env
+
+```bash
+SPTRANS_TOKEN=InsiraSeuTokenAqui
+```
+
+Para utilizá-lo no arquivo .py, utilize as bibliotecas **os** e **dotenv**.
+
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv(".env")
+```
+
+## 2. Fazendo login
+
+Com isso, podemos fazer a autênticação e utilizar a API do Olho Vivo.
+
+```python
+def login():
+    s = requests.Session()
+    res = s.post(
+        f"http://api.olhovivo.sptrans.com.br/v2.1/Login/Autenticar?token={os.getenv('SPTRANS_TOKEN')}"
+    )
+
+    if res.text:
+        return s
+```
+
+## 3. Encontrando o código da linha
+
+Para buscar as paradas e posições dos ônibus precisamos primeiro encontrar o código único da linha. Para isso utilizaremos o endpoint */Buscar*
+
+```python
+def buscar_cod(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1/Linha/Buscar?termosBusca={LINHA}")
+
+    return res.json()[0]['cl']
+```
+
+## 4. Recebendo os dados da API
+
+Para encontrar a parada e a posição dos ônibus utilizaremos */ParadasPorLinha* e */Linha*.
+
+```python
+def buscar_paradas(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1/Parada/BuscarParadasPorLinha?codigoLinha={LINHA}")
+    res = res.json()
+
+    return [(i['py'], i['px'], i['np']) for i in res]
+
+def buscar_posicao(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1//Posicao/Linha?codigoLinha={LINHA}")
+    res = res.json()
+
+    return [(i['p'], i['py'], i['px']) for i in res['vs']]
+
+posicao_veiculos = buscar_posicao(COD_LINHA)
+paradas = buscar_paradas(COD_LINHA)
+```
+
+## 5. Gerando mapas e inserindo marcadores
+
+Com **folium** podemos gerar um mapa e salvar em um arquivo .html.
+
+```python
+from folium import Map, Marker, Icon
+
+
+m = Map(location=[latitude, longitude], zoom_start=14)
+Marker(location=[latitude, longitude], popup=titulo, icon=icone).add_to(m)
+
+m.save("arquivo.html")
+```
+
+Para utilizar cores diferentes para os marcadores vamos criar dois objetos da classe *Icon()* com a propriedade *color* diferente.
+
+```python
+ICON_PARADA = Icon(color="blue")
+ICON_ONIBUS = Icon(color="red")
+```
+## 6. Resultado
+
+Vamos agora gerar o nosso código completo:
+
+Para esse exemplo utilizaremos a linha **8000-10 TERM. LAPA / PÇA. RAMOS DE AZEVEDO**
+
+```{python}
+import os
+import requests
+from dotenv import load_dotenv
+from folium import Map, Marker, Icon
+
+load_dotenv(".env")
+
+def login():
+    s = requests.Session()
+    res = s.post(
+        f"http://api.olhovivo.sptrans.com.br/v2.1/Login/Autenticar?token={os.getenv('SPTRANS_TOKEN')}"
+    )
+
+    if res.text:
+        return s
+
+def buscar_cod(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1/Linha/Buscar?termosBusca={LINHA}")
+
+    return res.json()[0]['cl']
+
+def buscar_paradas(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1/Parada/BuscarParadasPorLinha?codigoLinha={LINHA}")
+    res = res.json()
+
+    return [(i['py'], i['px'], i['np']) for i in res]
+
+def buscar_posicao(LINHA):
+    s = login()
+    res = s.get(f"http://api.olhovivo.sptrans.com.br/v2.1//Posicao/Linha?codigoLinha={LINHA}")
+    res = res.json()
+
+    return [(i['p'], i['py'], i['px']) for i in res['vs']]
+
+COD_LINHA = buscar_cod("8000")
+ICON_PARADA = Icon(color="blue")
+ICON_ONIBUS = Icon(color="red")
+
+posicao_veiculos = buscar_posicao(COD_LINHA)
+paradas = buscar_paradas(COD_LINHA)
+
+m = Map(location=[paradas[0][0], paradas[0][1]], zoom_start=14)
+
+for i in posicao_veiculos:
+    car_id, lat, lon = i
+    Marker(location=[lat, lon], popup=car_id, icon=ICON_ONIBUS).add_to(m)
+
+for i in paradas:
+    lat, lon, label = i
+    Marker(location=[lat, lon], popup=label, icon=ICON_PARADA).add_to(m)
+
+m.save("8000.html")
+```
+
+<iframe
+    src="8000.html"
+    height="600"
+    width="100%"
+    >
+</iframe>
+
+## Conclusão
+
+Esse é um projeto simples que voçê pode adicionar ao seu portfólio ou utilizar para criar novos projetos.
