@@ -3,6 +3,7 @@ title: "Regressão Linear: visualizando a relação entre valores"
 description: "Conheça a base para entender como a IA faz previsões."
 author: "André Pereira"
 date: "11/10/2025"
+date-modified: "11/16/2025"
 categories:
     - machine learning
     - análise preditiva
@@ -38,18 +39,46 @@ onde $b$ contém os coeficientes $[b_0, b_1]$
 
 ## Exemplo: relação entre anos de estudo e salário
 
-Como exemplo vamos utilizar duas *arrays*:
+### 1. Extraindo dados
 
-**X** para representar os anos de estudo e **y** para salários.
+Neste exemplo vamos utilizar dois arquivos que terão os dados que necessitamos.
+
+```txt
+
+---- X.txt (Anos de estudo)
+1.000119600075902
+1.0189872184946
+1.0236894585568583
+1.0237422754454655
+1.0237654179908648
+....
+
+---- y.txt (Salário)
+1143.976585302664
+2419.2561126222363
+1447.1317609602766
+334.15992825741625
+1214.7229741184829
+```
+
+Vamos então extrair as informações dos arquivos e transformá-las para arrays do **NumPy**
 
 ```python
 import numpy as np
 
-X = np.array([5, 7, 9, 10, 12, 13, 14, 16, 18, 20])
-y = np.array([1500, 1800, 2200, 2600, 3100, 3500, 4000, 4800, 5500, 6200])
+# Lendo os arquivos
+with open("X.txt", "r") as f:
+    X = [float(i) for i in f.read().split("\n") if i != '']
+
+with open("y.txt", "r") as f:
+    y = [float(i) for i in f.read().split("\n") if i != '']
+
+# Transformando em array NumPy
+X = np.array(X)
+y = np.array(y)
 ```
 
-### 1. Ajustando os dados
+### 2. Ajustando os dados
 
 Para calcular os coeficientes, precisamos adicionar uma coluna de 1s a X, que representa o intercepto da regressão.
 
@@ -58,7 +87,7 @@ Para calcular os coeficientes, precisamos adicionar uma coluna de 1s a X, que re
 X = np.array([[1, i] for i in X])
 ```
 
-### 2. Calculando os coeficientes
+### 3. Calculando os coeficientes
 
 Aplicamos a fórmula matricial da regressão linear.
 
@@ -70,7 +99,7 @@ res = np.dot(res, y)
 b0, b1 = res
 ```
 
-### 3. Calculando os valores previstos
+### 4. Calculando os valores previstos
 
 Com os coeficientes em mãos, podemos estimar os valores de **Y** (salário previsto):
 
@@ -78,7 +107,32 @@ Com os coeficientes em mãos, podemos estimar os valores de **Y** (salário prev
 Y = [b0 + b1 * i for i in X[:, 1]]
 ```
 
-Vamos visualizar o resultado:
+### 5. Visualização
+
+Para visualizarmos o nosso resultado utilizaremos o módulo *graph_objects* da biblioteca **Plotly**
+
+```python
+import plotly.graph_objects as go
+
+#  Visualização em gráfico
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=X, y=y, mode='markers', name='dados'))
+fig.add_trace(go.Scatter(x=X, y=Y, mode='lines', name='regressão linear'))
+
+fig.update_layout(
+    title='Relação entre sálario e anos de estudo',
+    xaxis_title='Anos de estudo',
+    yaxis_title='Salário'
+)
+
+fig.show()
+```
+
+Após isso necessitamos apenas rodar o arquivo .py
+
+```bash
+python script.py
+```
 
 ```{python}
 
@@ -88,9 +142,16 @@ Vamos visualizar o resultado:
 import plotly.graph_objects as go
 import numpy as np
 
-# Ajustando os dados
-X = np.array([5, 7, 9, 10, 12, 13, 14, 16, 18, 20])
-y = np.array([1500, 1800, 2200, 2600, 3100, 3500, 4000, 4800, 5500, 6200])
+# Lendo os arquivos
+with open("X.txt", "r") as f:
+    X = [float(i) for i in f.read().split("\n") if i != '']
+
+with open("y.txt", "r") as f:
+    y = [float(i) for i in f.read().split("\n") if i != '']
+
+# Transformando em array NumPy
+X = np.array(X)
+y = np.array(y)
 
 # Calculando os coeficientes
 def coef(X, y):
@@ -116,6 +177,7 @@ fig.update_layout(
     xaxis_title='Anos de estudo',
     yaxis_title='Salário'
 )
+
 fig.show()
 ```
 

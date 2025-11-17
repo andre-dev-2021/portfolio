@@ -187,4 +187,4 @@ m.save("8000.html")
 
 ## Conclusão
 
-Esse é um projeto simples que voçê pode adicionar ao seu portfólio ou utilizar para criar novos projetos.
+Esse é um projeto simples que você pode adicionar ao seu portfólio ou utilizar para criar novos projetos.
