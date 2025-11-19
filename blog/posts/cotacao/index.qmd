@@ -20,8 +20,6 @@ Extrair dados de APIs e elaborar gráficos são tarefas comuns em análise de da
 
 O Banco Central do Brasil disponibiliza uma API gratuita, sem necessidade de autenticação, que pode ser usada em diversos projetos.
 
-Neste exemplo, utilizaremos o endpoint */CotacaoDolarPeriodo*
-
 [📎Documentação da API](https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/swagger-ui3#/)
 
 ## Bibliotecas utilizadas:
@@ -53,7 +51,7 @@ def periodo(data):
 
 ## 2. Recebendo os dados da API
 
-Com as datas já formatadas (mmddYYYY), podemos buscar os dados através de uma requisição GET e organizá-los em listas.
+Com as datas já formatadas (mmddYYYY), podemos buscar os dados através de uma requisição GET para o endpoint e /CotacaoDolarPeriodo organizá-los em listas.
 
 ```python
 
@@ -75,19 +73,30 @@ datas = [int(i['dataHoraCotacao'][8:10]) for i in cotacao]
 
 ## 3. Preenchendo lacunas
 
-Utilizando a API do Banco Central podemos perceber uma limitação: não temos informações sobre as cotações em fins de semana e feriados. Felizmente isso é bem fácil de resolver, vamos somente duplicar valores do ultimo dia válido para utilizar para este dia.
+Utilizando a API do Banco Central podemos perceber uma limitação: não temos informações sobre as cotações em fins de semana e feriados. Felizmente isso é bem fácil de resolver, vamos utilizar outro endpoint, /CotacaoDolarDia e buscar recursivamente a ultima cotação disponível.
 
 ```python
-# Duplica dados para os dias que faltam
-mes = set(datas)
-for i in range(1, 31):
-    if i not in mes:
-        j = i - 1
-        while j not in mes:
-            j = j - 1
-        datas.append(i)
-        dados_compra.append(dados_compra[j-1])
-        dados_venda.append(dados_venda[j-1])
+def cotacao_dia(data):
+    url = fr"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='{data}'&$format=json"
+    res = requests.get(url)
+    res = res.json()
+    if res['value']: 
+        return res['value'][0]['cotacaoCompra'], res['value'][0]['cotacaoVenda'], int(res['value'][0]['dataHoraCotacao'][8:10])
+    else:
+        dia_anterior = datetime.strptime(data, "%m%d%Y") - timedelta(1)
+        dia_anterior = datetime.strftime(dia_anterior, "%m%d%Y")
+        return cotacao_dia(dia_anterior)
+
+mes = [i for i in range(1, 31)]
+dias_faltantes = set(mes) - set(datas)
+
+for i in dias_faltantes:
+    if i < 10:
+        i = '0' + f'{i}'
+    compra, venda, dia = cotacao_dia(f'09{i}2018')
+    dados_compra.append(compra)
+    dados_venda.append(venda)
+    datas.append(int(i))
 ```
 
 ## 4. Montando um DataFrame
@@ -148,9 +157,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import calendar
-from datetime import datetime
-
-data = "092018"
+from datetime import datetime, timedelta
 
 def periodo(data):
     primeiro_dia = datetime.strptime(data, "%m%Y")
@@ -160,30 +167,43 @@ def periodo(data):
 
     return primeiro_dia, ultimo_dia
 
-primeiro_dia, ultimo_dia = periodo(data)
-
-def cotar(primeiro_dia, ultimo_dia):
+def cotacao_mes(primeiro_dia, ultimo_dia):
     url = fr"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{primeiro_dia}'&@dataFinalCotacao='{ultimo_dia}'&$top=100&$format=json"
 
     res = requests.get(url, timeout=10)
     data = res.json()['value']
     return data
 
-cotacao = cotar(primeiro_dia, ultimo_dia)
+def cotacao_dia(data):
+    url = fr"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='{data}'&$format=json"
+    res = requests.get(url)
+    res = res.json()
+    if res['value']: 
+        return res['value'][0]['cotacaoCompra'], res['value'][0]['cotacaoVenda'], int(res['value'][0]['dataHoraCotacao'][8:10])
+    else:
+        dia_anterior = datetime.strptime(data, "%m%d%Y") - timedelta(1)
+        dia_anterior = datetime.strftime(dia_anterior, "%m%d%Y")
+        return cotacao_dia(dia_anterior)
+
+
+data = "092018"
+primeiro_dia, ultimo_dia = periodo(data)
+cotacao = cotacao_mes(primeiro_dia, ultimo_dia)
 
 dados_compra = [i['cotacaoCompra'] for i in cotacao]
 dados_venda = [i['cotacaoVenda'] for i in cotacao]
 datas = [int(i['dataHoraCotacao'][8:10]) for i in cotacao]
 
-mes = set(datas)
-for i in range(1, 31):
-    if i not in mes:
-        j = i - 1
-        while j not in mes:
-            j = j - 1
-        datas.append(i)
-        dados_compra.append(dados_compra[j-1])
-        dados_venda.append(dados_venda[j-1])
+mes = [i for i in range(1, 31)]
+dias_faltantes = set(mes) - set(datas)
+
+for i in dias_faltantes:
+    if i < 10:
+        i = '0' + f'{i}'
+    compra, venda, dia = cotacao_dia(f'09{i}2018')
+    dados_compra.append(compra)
+    dados_venda.append(venda)
+    datas.append(int(i))
 
 df_compra = pd.DataFrame({
     "preco": dados_compra,
@@ -204,15 +224,8 @@ fig.update_layout(
     xaxis_title="Dia",
     yaxis_title="Preço"
 )
-fig.write_html("grafico.html")
+fig.show()
 ```
-
-<iframe
-    src="grafico.html"
-    height="600"
-    width="100%"
-    >
-</iframe>
 
 ## Conclusão
 
@@ -221,5 +234,3 @@ Com poucas linhas de código, você aprendeu a:
 * extrair dados de uma API,
 * tratar e organizar as informações com **pandas**
 * e criar visualizações com **plotly**
-
-Esse fluxo é uma excelente base para projetos de análise de dados automatizada com Python.
