@@ -3,7 +3,7 @@ title: "Análise de Cotações do Dólar com Python e API do Banco Central"
 description: "Aprenda a extrair dados de APIs e criar gráficos interativos com Plotly."
 author: "André Pereira"
 date: "11/10/2025"
-date-modified: "11/16/2025"
+date-modified: "11/19/2025"
 categories:
     - python
     - análise de dados
@@ -40,42 +40,37 @@ Para isso, utilizaremos as bibliotecas **calendar** e **datetime**, que já vêm
 
 ```python
 import calendar
-from datetime import datetime as dt
+from datetime import datetime
 
-def encontrar_periodo(mmYYYY):
-    primeiro = dt.strptime(mmYYYY, "%m%Y")
-    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])
+def periodo(data):
+    primeiro_dia = datetime.strptime(data, "%m%Y")
+    ultimo_dia = primeiro_dia.replace(day = calendar.monthrange(primeiro_dia.year, primeiro_dia.month)[1])
+    primeiro_dia = datetime.strftime(primeiro_dia, "%m%d%Y")
+    ultimo_dia = datetime.strftime(ultimo_dia, "%m%d%Y")
 
-    primeiro = dt.strftime(primeiro, "%m-%d-%Y")
-    ultimo = dt.strftime(ultimo, "%m-%d-%Y")
-
-    return primeiro, ultimo
-
-# Para este exemplo utilizaremos o mês de Setembro/2018
-dataInicial, dataFinal = encontrar_periodo("092018")
+    return primeiro_dia, ultimo_dia
 ```
 
 ## 2. Recebendo os dados da API
 
-Com as datas já formatadas (mm-dd-YYYY), podemos buscar os dados através de uma requisição GET e organizá-los em listas.
+Com as datas já formatadas (mmddYYYY), podemos buscar os dados através de uma requisição GET e organizá-los em listas.
 
 ```python
 
-import requests as rq
+import requests
 
-def cotacao_mes(dataInicial, dataFinal):
-    res = rq.get(f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json", timeout=10)
+def cotar(primeiro_dia, ultimo_dia):
+    url = fr"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{primeiro_dia}'&@dataFinalCotacao='{ultimo_dia}'&$top=100&$format=json"
 
-    try:
-        return res.json()['value']
-    except:
-        return f"Erro: {res.status_code} - {res.text[:1000]}"
+    res = requests.get(url, timeout=10)
+    data = res.json()['value']
+    return data
 
-dados = cotacao_mes(dataInicial, dataFinal)
+cotacao = cotar(primeiro_dia, ultimo_dia)
 
-preco_compra = [i['cotacaoCompra'] for i in dados]
-preco_venda = [i['cotacaoVenda'] for i in dados]
-dia = [int(i['dataHoraCotacao'][8:10]) for i in dados]
+dados_compra = [i['cotacaoCompra'] for i in cotacao]
+dados_venda = [i['cotacaoVenda'] for i in cotacao]
+datas = [int(i['dataHoraCotacao'][8:10]) for i in cotacao]
 ```
 
 ## 3. Preenchendo lacunas
@@ -84,15 +79,15 @@ Utilizando a API do Banco Central podemos perceber uma limitação: não temos i
 
 ```python
 # Duplica dados para os dias que faltam
-mes = set(dia)
+mes = set(datas)
 for i in range(1, 31):
     if i not in mes:
         j = i - 1
         while j not in mes:
             j = j - 1
-        dia.append(i)
-        preco_compra.append(preco_compra[j-1])
-        preco_venda.append(preco_compra[j-1])
+        datas.append(i)
+        dados_compra.append(dados_compra[j-1])
+        dados_venda.append(dados_venda[j-1])
 ```
 
 ## 4. Montando um DataFrame
@@ -146,75 +141,72 @@ python script.py
 O resultado será um gráfico interativo com as cotações do mês especificado.
 
 ```{python}
-
 #| label: plot_cotacoes
 #| fig-cap: "Gráfico com cotações do mês de Setembro/2018"
 
-import calendar
-import requests as rq
+import requests
 import pandas as pd
 import plotly.express as px
-from datetime import datetime as dt
+import calendar
+from datetime import datetime
 
-def encontrar_periodo(mmYYYY):
-    primeiro = dt.strptime(mmYYYY, "%m%Y")
-    ultimo = primeiro.replace(day = calendar.monthrange(primeiro.year, primeiro.month)[1])
+data = "092018"
 
-    primeiro = dt.strftime(primeiro, "%m-%d-%Y")
-    ultimo = dt.strftime(ultimo, "%m-%d-%Y")
+def periodo(data):
+    primeiro_dia = datetime.strptime(data, "%m%Y")
+    ultimo_dia = primeiro_dia.replace(day = calendar.monthrange(primeiro_dia.year, primeiro_dia.month)[1])
+    primeiro_dia = datetime.strftime(primeiro_dia, "%m%d%Y")
+    ultimo_dia = datetime.strftime(ultimo_dia, "%m%d%Y")
 
-    return primeiro, ultimo
+    return primeiro_dia, ultimo_dia
 
-def cotacao_mes(dataInicial, dataFinal):
-    res = rq.get(f"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{dataInicial}'&@dataFinalCotacao='{dataFinal}'&$top=100&$format=json", timeout=10)
+primeiro_dia, ultimo_dia = periodo(data)
 
-    try:
-        return res.json()['value']
-    except:
-        return f"Erro: {res.status_code} - {res.text[:1000]}"
+def cotar(primeiro_dia, ultimo_dia):
+    url = fr"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{primeiro_dia}'&@dataFinalCotacao='{ultimo_dia}'&$top=100&$format=json"
 
-# Extração dos dados
-dataInicial, dataFinal = encontrar_periodo("092018")
-dados = cotacao_mes(dataInicial, dataFinal)
+    res = requests.get(url, timeout=10)
+    data = res.json()['value']
+    return data
 
-preco_compra = [i['cotacaoCompra'] for i in dados]
-preco_venda = [i['cotacaoVenda'] for i in dados]
-dia = [int(i['dataHoraCotacao'][8:10]) for i in dados]
+cotacao = cotar(primeiro_dia, ultimo_dia)
 
-# Duplica dados para os dias que faltam
-mes = set(dia)
+dados_compra = [i['cotacaoCompra'] for i in cotacao]
+dados_venda = [i['cotacaoVenda'] for i in cotacao]
+datas = [int(i['dataHoraCotacao'][8:10]) for i in cotacao]
+
+mes = set(datas)
 for i in range(1, 31):
     if i not in mes:
         j = i - 1
         while j not in mes:
             j = j - 1
-        dia.append(i)
-        preco_compra.append(preco_compra[j-1])
-        preco_venda.append(preco_compra[j-1])
+        datas.append(i)
+        dados_compra.append(dados_compra[j-1])
+        dados_venda.append(dados_venda[j-1])
 
-# Formatação em DataFrames
 df_compra = pd.DataFrame({
-    "preco": preco_compra,
+    "preco": dados_compra,
     "tipo": "Compra",
-    "dia": sorted(dia)
+    "dia": sorted(datas)
 })
 
 df_venda = pd.DataFrame({
-    "preco": preco_venda,
+    "preco": dados_venda,
     "tipo": "Venda",
-    "dia": sorted(dia)
+    "dia": sorted(datas)
 })
 
 df = pd.concat([df_compra, df_venda], ignore_index=True)
-
-# Exibição em gráfico de linha
 fig = px.line(df, x="dia", y="preco", color='tipo')
 fig.update_layout(
-    title="Gráfico: Cotações do dólar no mês de Setembro/2018",
+    title="Gráfico de cotações de Setembro/2018",
     xaxis_title="Dia",
-    yaxis_title="Preço")
+    yaxis_title="Preço"
+)
 fig.write_html("grafico.html")
 ```
+
 <iframe
     src="grafico.html"
     height="600"

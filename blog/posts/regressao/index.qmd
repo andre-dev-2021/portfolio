@@ -59,6 +59,7 @@ Neste exemplo vamos utilizar dois arquivos que terão os dados que necessitamos.
 1447.1317609602766
 334.15992825741625
 1214.7229741184829
+...
 ```
 
 Vamos então extrair as informações dos arquivos e transformá-las para arrays do **NumPy**

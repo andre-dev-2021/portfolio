@@ -3,6 +3,7 @@ title: "Mapa Interativo: Monitorando Posições e Paradas de Ônibus."
 description: "Criando mapas interativos com a biblioteca Folium"
 author: "André Pereira"
 date: "11/11/2025"
+date-modified: "11/16/2025"
 categories:
     - python
     - API
