@@ -136,7 +136,7 @@ fig.update_layout(
     title="Gráfico: Cotações do dólar no mês de Setembro/2018",
     xaxis_title="Dia",
     yaxis_title="Preço")
-fig.write_html("grafico.html")
+fig.show()
 ```
 
 ## 6. Observando o resultado
